@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vetty & Oleeo Integration: Streamlined Background Checks</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Softer, light blue-gray background */
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .section-title {
+            color: #1a202c; /* Darker text for titles */
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 0.75rem; /* Rounded corners */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); /* More pronounced shadow */
+        }
+        .btn-primary {
+            background-color: #6366f1; /* Indigo */
+            color: #ffffff;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .btn-primary:hover {
+            background-color: #4f46e5; /* Darker indigo on hover */
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px; /* Pill shape */
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        .status-pending { background-color: #fde68a; color: #92400e; } /* Light yellow */
+        .status-in-progress { background-color: #a5b4fc; color: #3730a3; } /* Light indigo */
+        .status-clear { background-color: #6ee7b7; color: #065f46; } /* Light green */
+        .status-completed { background-color: #c4b5fd; color: #5b21b6; } /* Light violet */
+
+        /* Custom styles for the ROI line graph */
+        .roi-graph-container {
+            width: 100%;
+            height: 300px;
+            background-color: #e0f2fe; /* Very light blue background */
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+        }
+        .roi-graph-svg {
+            width: 100%;
+            height: 100%;
+        }
+        .roi-line {
+            fill: none;
+            stroke: #6366f1;
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            animation: drawLine 2s ease-out forwards;
+        }
+        .roi-point {
+            fill: #6366f1;
+            stroke: #ffffff;
+            stroke-width: 2;
+            animation: fadeIn 1.5s ease-out forwards;
+        }
+        .roi-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            fill: #1e293b;
+            text-anchor: middle;
+            opacity: 0;
+            animation: fadeInText 2s forwards;
+            animation-delay: 1.5s; /* Delay text appearance */
+        }
+        .roi-axis-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            fill: #475569;
+        }
+
+        @keyframes drawLine {
+            from {
+                stroke-dasharray: 0 1000;
+            }
+            to {
+                stroke-dasharray: 1000 0;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes fadeInText {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+
+        /* Pie Chart Specific Styles */
+        .pie-chart-container {
+            width: 100%;
+            height: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f9ff;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+        }
+        .pie-chart-svg {
+            max-width: 250px;
+            max-height: 250px;
+            margin-bottom: 1rem;
+        }
+        .pie-slice {
+            transition: transform 0.3s ease-in-out;
+        }
+        .pie-slice:hover {
+            transform: scale(1.05);
+        }
+        .pie-legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+        }
+        .legend-color-box {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            margin-right: 0.5rem;
+        }
+        /* Style for logos to ensure consistent alignment */
+        .logo-inline {
+            height: 1.5rem; /* Adjust as needed for desired size */
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 0.25rem;
+        }
+        .logo-header {
+            height: 3rem; /* Larger size for header */
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 0.5rem;
+        }
+        /* Specific style for the new Vetty logo to remove background/padding */
+        .vetty-logo-header-new {
+            height: 36px; /* Based on provided height */
+            max-width: 186px; /* Based on provided max-width */
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 0.5rem;
+            background-color: transparent; /* Ensure no background from previous style */
+            padding: 0; /* Ensure no padding from previous style */
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="container mx-auto p-8 bg-white rounded-xl shadow-lg">
+
+        <!-- Header Section -->
+        <header class="text-center mb-12">
+            <h1 class="text-5xl font-extrabold text-gray-900 mb-4 section-title">
+                <img src="https://d2299yata20i8x.cloudfront.net/assets/vetty-full-color-2022-01.png" alt="Vetty Logo" class="vetty-logo-header-new"> & <img src="https://www.oleeo.com/wp-content/uploads/2024/06/Oleeo-LOGO-GRADIENT.png" alt="Oleeo Logo" class="logo-header"> Integration: Seamless for Smarter Hiring
+            </h1>
+            <p class="text-xl text-gray-600">
+                Streamline your background screening process and enhance your hiring efficiency.
+            </p>
+        </header>
+
+        <!-- Overview Section -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 section-title">Overview: A Unified Workflow</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <p class="text-lg text-gray-700 leading-relaxed mb-4">
+                        The Vetty and Oleeo integration establishes a streamlined, bidirectional workflow between your ATS (Oleeo) and Vetty’s background screening platform.
+                    </p>
+                    <p class="text-lg text-gray-700 leading-relaxed">
+                        This powerful synergy allows users to initiate background check orders directly from within Oleeo, eliminating the need to switch platforms and significantly reducing administrative overhead. Real-time status updates from Vetty are automatically reflected in Oleeo, ensuring efficient tracking and a cohesive user experience from start to finish.
+                    </p>
+                </div>
+                <div class="flex justify-center">
+                    <!-- Business Cartoon Handshake SVG -->
+                    <svg class="w-full h-64 md:h-80" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Background for the scene -->
+                        <rect x="0" y="0" width="400" height="200" fill="#e0f2fe" rx="15" ry="15"/>
+
+                        <!-- Vetty Character (Left) -->
+                        <g id="vetty-character">
+                            <!-- Body -->
+                            <rect x="50" y="70" width="60" height="80" rx="10" ry="10" fill="#6366f1"/>
+                            <!-- Head -->
+                            <circle cx="80" cy="55" r="30" fill="#6366f1"/>
+                            <!-- Vetty Logo (simplified) -->
+                            <path d="M70 50 L75 60 L85 45 L80 55 Z" fill="#ffffff"/>
+                            <rect x="70" y="50" width="20" height="10" fill="#ffffff" rx="2" ry="2"/>
+                            <!-- Arm for handshake -->
+                            <rect x="100" y="100" width="40" height="15" rx="5" ry="5" fill="#4f46e5" transform="rotate(-15 100 100)"/>
+                            <!-- Hand -->
+                            <circle cx="135" cy="95" r="10" fill="#4f46e5"/>
+                        </g>
+
+                        <!-- Oleeo Character (Right) -->
+                        <g id="oleeo-character">
+                            <!-- Body -->
+                            <rect x="290" y="70" width="60" height="80" rx="10" ry="10" fill="#34d399"/>
+                            <!-- Head -->
+                            <circle cx="320" cy="55" r="30" fill="#34d399"/>
+                            <!-- Oleeo Logo (simplified 'O') -->
+                            <circle cx="320" cy="55" r="15" fill="none" stroke="#ffffff" stroke-width="5"/>
+                            <!-- Arm for handshake -->
+                            <rect x="260" y="100" width="40" height="15" rx="5" ry="5" fill="#22c55e" transform="rotate(15 300 100)"/>
+                            <!-- Hand -->
+                            <circle cx="265" cy="95" r="10" fill="#22c55e"/>
+                        </g>
+
+                        <!-- Handshake Action -->
+                        <line x1="135" y1="95" x2="265" y2="95" stroke="#475569" stroke-width="8" stroke-linecap="round"/>
+                        <circle cx="200" cy="95" r="20" fill="none" stroke="#475569" stroke-width="3" stroke-dasharray="5,5">
+                            <animate attributeName="r" values="20;25;20" dur="1.5s" repeatCount="indefinite"/>
+                            <animate attributeName="stroke-opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite"/>
+                        </circle>
+
+                        <!-- Labels below characters -->
+                        <text x="80" y="170" font-family="Inter" font-size="20" fill="#1a202c" text-anchor="middle">Vetty</text>
+                        <text x="320" y="170" font-family="Inter" font-size="20" fill="#1a202c" text-anchor="middle">Oleeo</text>
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROI Section -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 section-title">Return on Investment (ROI)</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <ul class="list-disc list-inside text-lg text-gray-700 space-y-3">
+                        <li><strong class="text-gray-900">Reduced Time-to-Hire:</strong> Automating the background check process directly within Oleeo cuts down on manual data entry and platform switching, accelerating candidate onboarding.</li>
+                        <li><strong class="text-gray-900">Increased Operational Efficiency:</strong> Real-time status updates mean less time spent chasing information and more time focusing on strategic hiring initiatives.</li>
+                        <li><strong class="text-gray-900">Improved Candidate Experience:</strong> A smooth, integrated process reflects positively on your organization, enhancing the candidate journey.</li>
+                        <li><strong class="text-gray-900">Enhanced Data Accuracy:</strong> Bidirectional sync minimizes errors associated with manual data transfer, ensuring reliable information for critical hiring decisions.</li>
+                    </ul>
+                </div>
+                <div class="flex justify-center p-4">
+                    <!-- Gaining Line Graph for ROI -->
+                    <div class="roi-graph-container">
+                        <svg class="roi-graph-svg" viewBox="0 0 300 200">
+                            <!-- Grid Lines (Y-axis) -->
+                            <line x1="50" y1="170" x2="280" y2="170" stroke="#cbd5e1" stroke-width="0.5"/>
+                            <line x1="50" y1="130" x2="280" y2="130" stroke="#cbd5e1" stroke-width="0.5" stroke-dasharray="2,2"/>
+                            <line x1="50" y1="90" x2="280" y2="90" stroke="#cbd5e1" stroke-width="0.5" stroke-dasharray="2,2"/>
+                            <line x1="50" y1="50" x2="280" y2="50" stroke="#cbd5e1" stroke-width="0.5" stroke-dasharray="2,2"/>
+
+                            <!-- Y-axis Labels -->
+                            <text x="40" y="175" class="roi-axis-label" text-anchor="end">0%</text>
+                            <text x="40" y="135" class="roi-axis-label" text-anchor="end">25%</text>
+                            <text x="40" y="95" class="roi-axis-label" text-anchor="end">50%</text>
+                            <text x="40" y="55" class="roi-axis-label" text-anchor="end">75%</text>
+                            <text x="40" y="15" class="roi-axis-label" text-anchor="end">100%</text>
+
+                            <!-- X-axis Labels -->
+                            <text x="70" y="190" class="roi-axis-label">Q1</text>
+                            <text x="130" y="190" class="roi-axis-label">Q2</text>
+                            <text x="190" y="190" class="roi-axis-label">Q3</text>
+                            <text x="250" y="190" class="roi-axis-label">Q4</text>
+
+                            <!-- Line Path (Data: (Q1, 20%), (Q2, 45%), (Q3, 70%), (Q4, 90%)) -->
+                            <path d="M70 150 L130 105 L190 60 L250 20" class="roi-line"/>
+
+                            <!-- Data Points and Labels -->
+                            <circle cx="70" cy="150" r="4" class="roi-point"/>
+                            <text x="70" y="140" class="roi-label">20%</text>
+
+                            <circle cx="130" cy="105" r="4" class="roi-point"/>
+                            <text x="130" y="95" class="roi-label">45%</text>
+
+                            <circle cx="190" cy="60" r="4" class="roi-point"/>
+                            <text x="190" y="50" class="roi-label">70%</text>
+
+                            <circle cx="250" cy="20" r="4" class="roi-point"/>
+                            <text x="250" y="10" class="roi-label">90%</text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Business Impact Pie Chart Section -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 section-title">Business Impact & Growth Drivers</h2>
+            <p class="text-lg text-gray-700 mb-6">
+                Understand the key areas where the Vetty and Oleeo integration drives significant business value.
+            </p>
+            <div class="card p-6">
+                <h3 class="2xl font-semibold text-gray-800 mb-4">Contribution to Business Growth</h3>
+                <div class="pie-chart-container">
+                    <svg class="pie-chart-svg" viewBox="0 0 100 100">
+                        <!-- Paths will be generated by JS -->
+                        <path id="slice1" class="pie-slice" fill="#6366f1"></path>
+                        <path id="slice2" class="pie-slice" fill="#34d399"></path>
+                        <path id="slice3" class="pie-slice" fill="#fbbf24"></path>
+                        <path id="slice4" class="pie-slice" fill="#a78bfa"></path>
+                    </svg>
+                    <div class="pie-legend">
+                        <div class="legend-item">
+                            <span class="legend-color-box" style="background-color: #6366f1;"></span>
+                            Efficiency Gain (35%)
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color-box" style="background-color: #34d399;"></span>
+                            Time Savings (25%)
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color-box" style="background-color: #fbbf24;"></span>
+                            Cost Reduction (20%)
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color-box" style="background-color: #a78bfa;"></span>
+                            Candidate Experience (20%)
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-600 mt-4 text-center">
+                    *This pie chart visually represents the proportional contribution of different integration benefits to overall business growth.
+                </p>
+            </div>
+        </section>
+
+        <!-- Dynamic Response UI Section -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 section-title">Real-Time Status Updates in Oleeo Dashboard</h2>
+            <p class="text-lg text-gray-700 mb-6">
+                In your Oleeo application dashboard, you can view a list of all created candidates along with their current background check statuses, updated in near real-time from Vetty.
+            </p>
+
+            <div class="card p-6 mb-8">
+                <h3 class="2xl font-semibold text-gray-800 mb-4">Simulated Candidate Dashboard</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white rounded-lg overflow-hidden">
+                        <thead class="bg-gray-100 border-b border-gray-200">
+                            <tr>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Application ID</th>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">First Name</th>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Last Name</th>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Email</th>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Initial Last Response</th>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Initial Response Data</th>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Profile URL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="candidateTableBody" class="divide-y divide-gray-200">
+                            <!-- Candidate rows will be inserted here by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-6 text-center">
+                    <button id="simulateUpdateBtn" class="btn-primary inline-flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.126a8.001 8.001 0 0110.424 7.464A1 1 0 0115.82 13H17a1 1 0 010 2h-1.18a10.001 10.001 0 00-16.64 0H3a1 1 0 010-2h1.18a8.001 8.001 0 0110.424-7.464V3a1 1 0 011-1zm10 8a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span>Simulate Status Update</span>
+                    </button>
+                    <div id="messageBox" class="mt-4 p-3 bg-blue-100 text-blue-700 rounded-md hidden"></div>
+                </div>
+            </div>
+
+            <h3 class="text-2xl font-semibold text-gray-800 mb-4">Status Flow Includes:</h3>
+            <div class="flex flex-wrap gap-4">
+                <span class="status-badge status-pending">Pending</span>
+                <span class="status-badge status-in-progress">In Progress</span>
+                <span class="status-badge status-clear">Clear / Consider</span>
+                <span class="status-badge status-completed">Completed</span>
+            </div>
+        </section>
+
+        <!-- Footer Section -->
+        <footer class="text-center pt-8 border-t border-gray-200 text-gray-500">
+            <p>&copy; 2025 Vetty & Oleeo. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // JavaScript for dynamic UI updates
+        document.addEventListener('DOMContentLoaded', () => {
+            const candidateTableBody = document.getElementById('candidateTableBody');
+            const simulateUpdateBtn = document.getElementById('simulateUpdateBtn');
+            const messageBox = document.getElementById('messageBox');
+
+            // Initial candidate data with new fields
+            let candidates = [
+                {
+                    appId: 'APP001',
+                    firstName: 'Alice',
+                    lastName: 'Johnson',
+                    email: 'alice.j@example.com',
+                    initialLastResponse: 'Success',
+                    initialResponseData: 'Order Created successfully',
+                    status: 'Pending',
+                    profileUrl: 'https://example.com/alice'
+                },
+                {
+                    appId: 'APP002',
+                    firstName: 'Bob',
+                    lastName: 'Williams',
+                    email: 'bob.w@example.com',
+                    initialLastResponse: 'Success',
+                    initialResponseData: 'Order Created successfully',
+                    status: 'In Progress',
+                    profileUrl: 'https://example.com/bob'
+                },
+                {
+                    appId: 'APP003',
+                    firstName: 'Charlie',
+                    lastName: 'Brown',
+                    email: 'charlie.b@example.com',
+                    initialLastResponse: 'Success',
+                    initialResponseData: 'Order Created successfully',
+                    status: 'Pending',
+                    profileUrl: 'https://example.com/charlie'
+                },
+                {
+                    appId: 'APP004',
+                    firstName: 'Diana',
+                    lastName: 'Prince',
+                    email: 'diana.p@example.com',
+                    initialLastResponse: 'Success',
+                    initialResponseData: 'Order Created successfully',
+                    status: 'In Progress',
+                    profileUrl: 'https://example.com/diana'
+                }
+            ];
+
+            // Function to render candidates to the table
+            function renderCandidates() {
+                candidateTableBody.innerHTML = ''; // Clear existing rows
+                candidates.forEach(candidate => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="py-3 px-4 whitespace-nowrap text-gray-800">${candidate.appId}</td>
+                        <td class="py-3 px-4 whitespace-nowrap text-gray-800">${candidate.firstName}</td>
+                        <td class="py-3 px-4 whitespace-nowrap text-gray-800">${candidate.lastName}</td>
+                        <td class="py-3 px-4 whitespace-nowrap text-gray-600">${candidate.email}</td>
+                        <td class="py-3 px-4 whitespace-nowrap text-gray-600">${candidate.initialLastResponse}</td>
+                        <td class="py-3 px-4 whitespace-nowrap text-gray-600">${candidate.initialResponseData}</td>
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <span class="status-badge status-${candidate.status.toLowerCase().replace(/\s/g, '-')}" id="status-${candidate.appId}">
+                                ${candidate.status}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <a href="${candidate.profileUrl}" target="_blank" class="text-blue-600 hover:underline">View Profile</a>
+                        </td>
+                    `;
+                    candidateTableBody.appendChild(row);
+                });
+            }
+
+            // Function to simulate status updates
+            simulateUpdateBtn.addEventListener('click', () => {
+                const statuses = ['Pending', 'In Progress', 'Clear / Consider', 'Completed'];
+                let updatedCount = 0;
+
+                candidates.forEach(candidate => {
+                    // Only update if not already 'Completed'
+                    if (candidate.status !== 'Completed') {
+                        const currentIndex = statuses.indexOf(candidate.status);
+                        const nextIndex = (currentIndex + 1) % statuses.length;
+                        candidate.status = statuses[nextIndex];
+                        updatedCount++;
+                    }
+                });
+
+                renderCandidates(); // Re-render the table with updated statuses
+                showMessage(`Simulated update for ${updatedCount} candidate(s).`);
+            });
+
+            // Function to display a temporary message
+            function showMessage(message) {
+                messageBox.textContent = message;
+                messageBox.classList.remove('hidden');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 3000); // Hide after 3 seconds
+            }
+
+            // Pie Chart Calculation Functions
+            function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+                const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0; // Adjust 0deg to be 12 o'clock
+                return {
+                    x: centerX + (radius * Math.cos(angleInRadians)),
+                    y: centerY + (radius * Math.sin(angleInRadians))
+                };
+            }
+
+            function getPieSlicePath(centerX, centerY, radius, startAngle, endAngle) {
+                const start = polarToCartesian(centerX, centerY, radius, startAngle);
+                const end = polarToCartesian(centerX, centerY, radius, endAngle);
+
+                const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+                const sweepFlag = "1"; // Clockwise
+
+                return [
+                    "M", centerX, centerY,
+                    "L", start.x, start.y,
+                    "A", radius, radius, 0, largeArcFlag, sweepFlag, end.x, end.y,
+                    "Z"
+                ].join(" ");
+            }
+
+            // Render Pie Chart
+            const pieData = [
+                { label: "Efficiency Gain", percentage: 35, color: "#6366f1", id: "slice1" },
+                { label: "Time Savings", percentage: 25, color: "#34d399", id: "slice2" },
+                { label: "Cost Reduction", percentage: 20, color: "#fbbf24", id: "slice3" },
+                { label: "Candidate Experience", percentage: 20, color: "#a78bfa", id: "slice4" }
+            ];
+
+            let currentAngle = 0;
+            pieData.forEach(slice => {
+                const angle = slice.percentage * 3.6; // Convert percentage to degrees
+                const path = getPieSlicePath(50, 50, 40, currentAngle, currentAngle + angle);
+                document.getElementById(slice.id).setAttribute('d', path);
+                currentAngle += angle;
+            });
+
+            // Initial render when the page loads
+            renderCandidates();
+        });
+    </script>
+</body>
+</html>
